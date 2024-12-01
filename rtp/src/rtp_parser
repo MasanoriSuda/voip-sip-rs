@@ -1,0 +1,43 @@
+use nom::bits::{bits, complete::take};
+use nom::error::Error;
+use nom::sequence::tuple;
+use nom::IResult;
+
+struct RtpPacket {
+    pub version: u8,
+    pub padding: u8,
+    pub extension: u8,
+    pub csrc_count: u8,
+}
+
+fn parse_rtp_packet(rtp: &[u8]) -> IResult<&[u8], RtpPacket> {
+    let (rtp, (version, padding, extension, csrc_count)) = parse_vpxcc(rtp)?;
+    Ok((
+        rtp,
+        RtpPacket {
+            version,
+            padding,
+            extension,
+            csrc_count,
+        },
+    ))
+}
+
+fn parse_vpxcc(rtp: &[u8]) -> IResult<&[u8], (u8, u8, u8, u8)> {
+    bits::<_, _, Error<(&[u8], usize)>, _, _>(tuple((
+        take(4usize),
+        take(1usize),
+        take(1usize),
+        take(2usize),
+    )))(rtp)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_vpxcc_helper() {
+        let input: [u8; 1] = [0xFF];
+        assert_eq!(parse_rtp_packet(&input), (0x0F, 0x01, 0x01, 0x03));
+    }
+}
